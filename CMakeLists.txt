@@ -3,13 +3,13 @@ project(quatro)
 
 ### set compiler
 set(CMAKE_BUILD_TYPE "Release")
-set(CMAKE_CXX_FLAGS "-std=c++17 -fexceptions -g -ggdb")
+set(CMAKE_CXX_FLAGS "-std=c++17 -fexceptions -g -ggdb -fopenmp -O3 -ftree-vectorize -funroll-loops")
 include(FindOpenMP) #The best way to set proper compiler settings for using OpenMP in all platforms
 if(OPENMP_FOUND) #The best way to set proper compiler settings for using OpenMP in all platforms
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-else(OPENMP_FOUND)
+else()
   message("ERROR: OpenMP could not be found.")
 endif(OPENMP_FOUND)
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall ${CMAKE_CXX_FLAGS}")
@@ -51,12 +51,7 @@ if(QUATRO_DEBUG)
   add_definitions(-DQUATRO_DEBUG)
 endif()
 
-### output as catkin package
-find_package(catkin REQUIRED)
-catkin_package( #this automatically adds/installs the results of build
-  INCLUDE_DIRS include
-  LIBRARIES ${PROJECT_NAME}
-)
+find_package(ament_cmake REQUIRED)
 
 ### get packages' headers
 include_directories(
@@ -70,8 +65,29 @@ include_directories(
 ###########
 ### main
 add_library(${PROJECT_NAME} src/fpfh.cc src/matcher.cc src/quatro_module.cc)
-if (QUATRO_TBB)
+if(QUATRO_TBB)
   target_link_libraries(${PROJECT_NAME} ${OpenMP_LIBS} ${EIGEN3_LIBS} ${PCL_LIBRARIES} teaserpp::teaser_registration teaserpp::teaser_io ${TBB_LIBRARY})
 else()
   target_link_libraries(${PROJECT_NAME} ${OpenMP_LIBS} ${EIGEN3_LIBS} ${PCL_LIBRARIES} teaserpp::teaser_registration teaserpp::teaser_io)
 endif()
+
+install(DIRECTORY include/
+  DESTINATION include/
+)
+
+install(TARGETS ${PROJECT_NAME}
+  EXPORT export_${PROJECT_NAME}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+
+ament_export_libraries(
+  ${PROJECT_NAME}
+)
+
+ament_export_include_directories(
+  include
+)
+
+ament_package()
